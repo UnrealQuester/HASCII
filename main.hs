@@ -1,6 +1,7 @@
 import System.Environment (getArgs)
 import Vision.Image
 import Vision.Primitive
+import System.Console.Terminal.Size
 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
@@ -38,12 +39,14 @@ printLines l = mapM_ putStrLn l
 main :: IO ()
 main = do
     [input] <- getArgs
+    terminalSize <- size
+    let imageWidth = maybe 75 width terminalSize
     imgage <- load Nothing input
     case imgage of
         Right img -> do
             let
                 rgb = convert img ::RGB
-                miniature = fitToWidth 100 rgb
+                miniature = fitToWidth imageWidth rgb
                 asciiArt = toAscii miniature
             printLines asciiArt
         Left err -> print err
