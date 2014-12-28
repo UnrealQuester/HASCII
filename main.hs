@@ -1,7 +1,7 @@
 import System.Environment (getArgs)
 import Vision.Image
 import Vision.Primitive
-import System.Console.Terminal.Size
+import qualified System.Console.Terminal.Size as T
 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
@@ -39,8 +39,8 @@ printLines l = mapM_ putStrLn l
 main :: IO ()
 main = do
     [input] <- getArgs
-    terminalSize <- size
-    let imageWidth = maybe 75 width terminalSize
+    terminalSize <- T.size
+    let imageWidth = maybe 75 T.width terminalSize
     imgage <- load Nothing input
     case imgage of
         Right img -> do
