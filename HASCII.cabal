@@ -57,7 +57,7 @@ executable HASCII
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.6 && <4.7, friday, terminal-size
+  build-depends:       base >=4.6 && <4.7, friday, terminal-size, cmdtheline
   
   -- Directories containing source files.
   -- hs-source-dirs:      

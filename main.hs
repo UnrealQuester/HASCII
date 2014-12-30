@@ -1,7 +1,11 @@
-import System.Environment (getArgs)
+import Control.Applicative
 import Vision.Image
 import Vision.Primitive
 import qualified System.Console.Terminal.Size as T
+import System.Console.CmdTheLine
+
+fileName :: Term String
+fileName = required $ pos 0 Nothing posInfo {posName = "FILENAME", posDoc = "path to the file to be converted to ascii"}
 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
@@ -36,12 +40,14 @@ toAscii img = fmap (toAsciiRow greyscale) (reverse [0 .. (imgHeight greyscale) -
 printLines :: [String] -> IO ()
 printLines l = mapM_ putStrLn l
 
-main :: IO ()
-main = do
-    [input] <- getArgs
+termInfo :: TermInfo
+termInfo = defTI { termName = "HASCII", version = "1.0"  }
+
+printAscii :: String -> IO ()
+printAscii file = do
     terminalSize <- T.size
     let imageWidth = maybe 75 T.width terminalSize
-    imgage <- load Nothing input
+    imgage <- load Nothing file
     case imgage of
         Right img -> do
             let
@@ -50,3 +56,10 @@ main = do
                 asciiArt = toAscii miniature
             printLines asciiArt
         Left err -> print err
+
+term :: Term (IO ())
+term = printAscii <$> fileName
+
+main :: IO ()
+main = do
+    run (term, termInfo)
