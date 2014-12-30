@@ -7,6 +7,9 @@ import System.Console.CmdTheLine
 fileName :: Term String
 fileName = required $ pos 0 Nothing posInfo {posName = "FILENAME", posDoc = "path to the file to be converted to ascii"}
 
+argWidth :: Term (Maybe Int)
+argWidth = value $ opt Nothing (optInfo ["w", "width"]) {optName = "WIDTH", optDoc = "Width of the output in characters"}
+
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
     where
@@ -43,10 +46,12 @@ printLines l = mapM_ putStrLn l
 termInfo :: TermInfo
 termInfo = defTI { termName = "HASCII", version = "1.0"  }
 
-printAscii :: String -> IO ()
-printAscii file = do
+printAscii :: Maybe Int -> String -> IO ()
+printAscii asciiWidth file = do
     terminalSize <- T.size
-    let imageWidth = maybe 75 T.width terminalSize
+    let imageWidth = case asciiWidth of
+            Nothing -> maybe 75 T.width terminalSize
+            Just w -> w
     imgage <- load Nothing file
     case imgage of
         Right img -> do
@@ -58,7 +63,7 @@ printAscii file = do
         Left err -> print err
 
 term :: Term (IO ())
-term = printAscii <$> fileName
+term = printAscii <$> argWidth <*> fileName
 
 main :: IO ()
 main = do
