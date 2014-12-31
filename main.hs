@@ -1,6 +1,9 @@
+import Debug.Trace
+import qualified Data.Vector.Storable as V
 import Control.Applicative
-import Vision.Image
+import Vision.Image hiding (map)
 import Vision.Primitive
+import qualified Vision.Histogram as H
 import qualified System.Console.Terminal.Size as T
 import System.Console.CmdTheLine
 
@@ -28,13 +31,26 @@ imgHeight img = imgHeight' $ shape img
 
 asciiChars = [ '#', '?', '%', 'S', '@', '+', '*', ':', ',', '.']
 
-pixelToAscii :: GreyPixel -> Char
-pixelToAscii pixel = asciiChars !! (floor $ aspectRatio * fromIntegral pixel)
+divideEvenly :: Double -> [Int] -> [[Int]]
+divideEvenly _    [] = [[]]
+divideEvenly size xs = bucket : (divideEvenly size remaining)
     where
-        aspectRatio = (fromIntegral $ length asciiChars) / (256) :: Double
+        (bucket, remaining) = (take n xs, drop n xs)
+        n = n' $ dropWhile (\l -> fromIntegral (sum (take l xs)) < size) [1 .. length xs]
+        n' [] = length xs
+        n' (x:_) = x
+
+asciiHist :: H.Histogram DIM1 Int -> [Char]
+asciiHist hist = concat $ zipWith (\a b -> map (const a) b) asciiChars $ (show (divideEvenly bucketSize (histList hist))`trace` (divideEvenly bucketSize (histList hist)))
+    where
+       histList (H.Histogram _ vec) = V.toList vec
+       bucketSize = (fromIntegral $ sum (histList hist)) / (fromIntegral $ length asciiChars) :: Double
+
+pixelToAscii :: GreyPixel -> H.Histogram DIM1 Int -> Char
+pixelToAscii pixel hist = asciiHist hist !! (fromIntegral pixel)
 
 toAsciiRow :: Grey -> Int -> String
-toAsciiRow img y = fmap (\x -> pixelToAscii (index img (Z:. y :. x)) ) [0 .. (imgWidth img) - 1]
+toAsciiRow img y = fmap (\x -> pixelToAscii (index img (Z:. y :. x)) (H.histogram Nothing img :: H.Histogram DIM1 Int)) [0 .. (imgWidth img) - 1]
 
 toAscii :: RGB -> [String]
 toAscii img = fmap (toAsciiRow greyscale) (reverse [0 .. (imgHeight greyscale) - 1]) where
