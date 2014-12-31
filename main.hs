@@ -29,7 +29,8 @@ imgHeight img = imgHeight' $ shape img
     where
         imgHeight' (Z :. h :. _) = h
 
-asciiChars = [ '#', '?', '%', 'S', '@', '+', '*', ':', ',', '.']
+asciiChars :: [Char]
+asciiChars = "█▓▒░#%@+*:,,., "
 
 divideEvenly :: Double -> [Int] -> [[Int]]
 divideEvenly _    [] = [[]]
