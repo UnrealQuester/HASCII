@@ -45,10 +45,11 @@ replaceWith :: a -> [b] -> [a]
 replaceWith e l = map (const e) l
 
 asciiHist :: H.Histogram DIM1 Int -> [Char]
-asciiHist hist = concat $ zipWith replaceWith asciiChars (divideEvenly bucketSize (histList hist))
+asciiHist hist = concat $ zipWith replaceWith asciiChars balancedHist
     where
        histList (H.Histogram _ vec) = V.toList vec
        bucketSize = (fromIntegral $ sum (histList hist)) / (fromIntegral $ length asciiChars) :: Double
+       balancedHist = divideEvenly bucketSize (histList hist)
 
 pixelToAscii :: GreyPixel -> H.Histogram DIM1 Int -> Char
 pixelToAscii pixel hist = asciiHist hist !! (fromIntegral pixel)
