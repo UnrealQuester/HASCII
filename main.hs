@@ -41,8 +41,11 @@ divideEvenly size xs = bucket : (divideEvenly size remaining)
         n' [] = length xs
         n' (x:_) = x
 
+replaceWith :: a -> [b] -> [a]
+replaceWith e l = map (const e) l
+
 asciiHist :: H.Histogram DIM1 Int -> [Char]
-asciiHist hist = concat $ zipWith (\a b -> map (const a) b) asciiChars $ (divideEvenly bucketSize (histList hist))
+asciiHist hist = concat $ zipWith replaceWith asciiChars (divideEvenly bucketSize (histList hist))
     where
        histList (H.Histogram _ vec) = V.toList vec
        bucketSize = (fromIntegral $ sum (histList hist)) / (fromIntegral $ length asciiChars) :: Double
