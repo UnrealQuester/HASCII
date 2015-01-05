@@ -1,4 +1,3 @@
-import Debug.Trace
 import qualified Data.Vector.Storable as V
 import Control.Applicative
 import Vision.Image hiding (map)
