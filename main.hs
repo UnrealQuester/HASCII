@@ -26,7 +26,7 @@ toRange ( [v]  ) = [(v, 255)]
 toRange (u:v:xs) = (u, v-1) : toRange (v:xs)
 
 sigma :: H.Histogram DIM1 Double -> [Int] -> Double
-sigma hist thresh = sum $ replaceNaN $ fmap (uncurry (interClassVariance)) $ toRange thresh
+sigma hist thresh = sum $ replaceNaN $ fmap (uncurry interClassVariance) $ toRange thresh
     where
         histVec = H.vector hist
         interClassVariance u v = s u v ^ (2::Integer) / p u v
@@ -44,7 +44,7 @@ multiOtsu hist n = fst $ maximumBy (comparing snd) $ fmap (\x -> (x, sigma hist 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
     where
-        height = ceiling $ (aspectRatio) * (fromIntegral width) :: Int
+        height = ceiling $ aspectRatio * fromIntegral width :: Int
         aspectRatio = (fromIntegral $ imgHeight img) / (fromIntegral $ imgWidth img) :: Double
 
 imgWidth :: MaskedImage i => i -> Int
@@ -69,10 +69,10 @@ pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 3) asciiChars
         gnorm = H.normalize 1.0 hist
 
 toAsciiRow :: Grey -> Int -> String
-toAsciiRow img y = fmap (\x -> pixelToAscii (index img (Z:. y :. x)) (H.histogram Nothing img :: H.Histogram DIM1 Int)) [0 .. (imgWidth img) - 1]
+toAsciiRow img y = fmap (\x -> pixelToAscii (index img (Z:. y :. x)) (H.histogram Nothing img :: H.Histogram DIM1 Int)) [0 .. imgWidth img - 1]
 
 toAscii :: RGB -> [String]
-toAscii img = fmap (toAsciiRow greyscale) (reverse [0 .. (imgHeight greyscale) - 1]) where
+toAscii img = fmap (toAsciiRow greyscale) (reverse [0 .. imgHeight greyscale - 1]) where
     greyscale = convert img :: Grey
 
 printLines :: [String] -> IO ()
