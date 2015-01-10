@@ -76,7 +76,7 @@ toAscii img = fmap (toAsciiRow greyscale) (reverse [0 .. imgHeight greyscale - 1
     greyscale = convert img :: Grey
 
 printLines :: [String] -> IO ()
-printLines l = mapM_ putStrLn l
+printLines = mapM_ putStrLn
 
 termInfo :: TermInfo
 termInfo = defTI { termName = "HASCII", version = "1.0"  }
@@ -101,5 +101,4 @@ term :: Term (IO ())
 term = printAscii <$> argWidth <*> fileName
 
 main :: IO ()
-main = do
-    run (term, termInfo)
+main = run (term, termInfo)
