@@ -7,6 +7,7 @@ import qualified System.Console.Terminal.Size as T
 import System.Console.CmdTheLine
 import Data.List (maximumBy)
 import Data.Ord (comparing)
+import Data.Maybe
 
 fileName :: Term String
 fileName = required $ pos 0 Nothing posInfo {posName = "FILENAME", posDoc = "path to the file to be converted to ascii"}
@@ -84,9 +85,7 @@ termInfo = defTI { termName = "HASCII", version = "1.0"  }
 printAscii :: Maybe Int -> String -> IO ()
 printAscii asciiWidth file = do
     terminalSize <- T.size
-    let imageWidth = case asciiWidth of
-            Nothing -> maybe 75 T.width terminalSize
-            Just w -> w
+    let imageWidth = fromMaybe (maybe 75 T.width terminalSize) asciiWidth
     imgage <- load Nothing file
     case imgage of
         Right img -> do
