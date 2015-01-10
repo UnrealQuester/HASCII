@@ -27,7 +27,7 @@ toRange ( [v]  ) = [(v, 255)]
 toRange (u:v:xs) = (u, v-1) : toRange (v:xs)
 
 sigma :: H.Histogram DIM1 Double -> [Int] -> Double
-sigma hist thresh = sum $ replaceNaN $ fmap (uncurry interClassVariance) $ toRange thresh
+sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> toRange thresh
     where
         histVec = H.vector hist
         interClassVariance u v = s u v ^ (2::Integer) / p u v
@@ -46,7 +46,7 @@ fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
     where
         height = ceiling $ aspectRatio * fromIntegral width :: Int
-        aspectRatio = (fromIntegral $ imgHeight img) / (fromIntegral $ imgWidth img) :: Double
+        aspectRatio = fromIntegral (imgHeight img) / fromIntegral (imgWidth img) :: Double
 
 imgWidth :: MaskedImage i => i -> Int
 imgWidth img = imgWidth' $ shape img
@@ -64,7 +64,6 @@ asciiChars = "█▓▒░"
 pixelToAscii :: GreyPixel -> H.Histogram DIM1 Int -> Char
 pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 3) asciiChars
     where
-        pixelToAscii' :: [Int] -> [Char] -> Char
         pixelToAscii' [] (c:_) = c
         pixelToAscii' (x:xs) (c:cs) = if fromIntegral pix < x then c else pixelToAscii' xs cs
         gnorm = H.normalize 1.0 hist
