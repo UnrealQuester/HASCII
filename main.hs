@@ -8,9 +8,10 @@ import System.Console.CmdTheLine
 import Data.List (maximumBy)
 import Data.Ord (comparing)
 import Data.Maybe
+import qualified Data.ByteString as BS
 
-fileName :: Term String
-fileName = required $ pos 0 Nothing posInfo {posName = "FILENAME", posDoc = "path to the file to be converted to ascii"}
+fileName :: Term (Maybe String)
+fileName = value $ pos 0 Nothing posInfo {posName = "FILENAME", posDoc = "path to the file to be converted to ascii"}
 
 argWidth :: Term (Maybe Int)
 argWidth = value $ opt Nothing (optInfo ["w", "width"]) {optName = "WIDTH", optDoc = "Width of the output in characters"}
@@ -81,11 +82,11 @@ printLines = mapM_ putStrLn
 termInfo :: TermInfo
 termInfo = defTI { termName = "HASCII", version = "1.0"  }
 
-printAscii :: Maybe Int -> String -> IO ()
+printAscii :: Maybe Int -> Maybe String -> IO ()
 printAscii asciiWidth file = do
     terminalSize <- T.size
     let imageWidth = fromMaybe (maybe 75 T.width terminalSize) asciiWidth
-    imgage <- load Nothing file
+    imgage <- maybe (loadBS Nothing =<< BS.getContents) (load Nothing) file
     case imgage of
         Right img -> do
             let
