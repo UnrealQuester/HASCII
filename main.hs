@@ -40,13 +40,14 @@ sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> toRange th
         p u v = lP v - lP u
         s u v = lS v - lS u
 
+
 multiOtsu :: H.Histogram DIM1 Double -> Int -> [Int]
 multiOtsu hist n = fst $ maximumBy (comparing snd) $ fmap (\x -> (x, sigma hist (0:x))) (thresholds n 1)
 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
     where
-        height = ceiling $ aspectRatio * fromIntegral width :: Int
+        height = ceiling $ aspectRatio * fromIntegral width * 0.5 :: Int
         aspectRatio = fromIntegral (imgHeight img) / fromIntegral (imgWidth img) :: Double
 
 imgWidth :: MaskedImage i => i -> Int
