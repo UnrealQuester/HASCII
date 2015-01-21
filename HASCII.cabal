@@ -46,7 +46,7 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 
-executable HASCII
+executable hascii
   -- .hs or .lhs file containing the Main module.
   main-is:             main.hs
   ghc-options:         -O2 -Wall
