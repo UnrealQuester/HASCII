@@ -7,14 +7,19 @@ import qualified System.Console.Terminal.Size as T
 import System.Console.CmdTheLine
 import Data.List (maximumBy)
 import Data.Ord (comparing)
-import Data.Maybe
 import qualified Data.ByteString as BS
 
 fileName :: Term (Maybe String)
 fileName = value $ pos 0 Nothing posInfo {posName = "FILENAME", posDoc = "path to the file to be converted to ascii"}
 
+argHeight :: Term (Maybe Int)
+argHeight = value $ opt Nothing (optInfo ["h", "height"]) {optName = "HEIGHT", optDoc = "Height of the output in characters"}
+
 argWidth :: Term (Maybe Int)
 argWidth = value $ opt Nothing (optInfo ["w", "width"]) {optName = "WIDTH", optDoc = "Width of the output in characters"}
+
+argFit :: Term Bool
+argFit = value $ flag (optInfo ["fit-height"]) {optDoc = "Fit the image to the terminal height instead of width"}
 
 addTo :: a -> [[a]] -> [[a]]
 addTo x = fmap (x:)
@@ -50,6 +55,12 @@ fitToWidth width img = resize TruncateInteger (ix2 height width) img
         height = ceiling $ aspectRatio * fromIntegral width * 0.5 :: Int
         aspectRatio = fromIntegral (imgHeight img) / fromIntegral (imgWidth img) :: Double
 
+fitToHeight :: Int -> RGB -> RGB
+fitToHeight height img = resize TruncateInteger (ix2 height width) img
+    where
+        width = ceiling $ aspectRatio * fromIntegral height * 2 :: Int
+        aspectRatio = fromIntegral (imgWidth img) / fromIntegral (imgHeight img) :: Double
+
 imgWidth :: MaskedImage i => i -> Int
 imgWidth img = imgWidth' $ shape img
     where
@@ -83,22 +94,32 @@ printLines = mapM_ putStrLn
 termInfo :: TermInfo
 termInfo = defTI { termName = "HASCII", version = "1.0"  }
 
-printAscii :: Maybe Int -> Maybe String -> IO ()
-printAscii asciiWidth file = do
+outPutSize :: Maybe Int -> Maybe Int -> Bool -> IO (RGB -> RGB)
+outPutSize (Just w) (Just h) _   = return $ resize TruncateInteger (ix2 h w)
+outPutSize (Just w) _ _          = return $ fitToWidth w
+outPutSize _ (Just h) _          = return $ fitToHeight h
+outPutSize _ _ shouldFitToHeight = do
     terminalSize <- T.size
-    let imageWidth = fromMaybe (maybe 75 T.width terminalSize) asciiWidth
+    if shouldFitToHeight then
+        return (fitToHeight $ maybe 75 T.height terminalSize)
+    else
+        return (fitToWidth $ maybe 75 T.width terminalSize)
+
+printAscii :: Maybe String -> IO (RGB -> RGB) -> IO ()
+printAscii file transform = do
     imgage <- maybe (loadBS Nothing =<< BS.getContents) (load Nothing) file
     case imgage of
         Right img -> do
+            trans <- transform
             let
                 rgb = convert img ::RGB
-                miniature = fitToWidth imageWidth rgb
+                miniature = trans rgb
                 asciiArt = toAscii miniature
             printLines asciiArt
         Left err -> print err
 
 term :: Term (IO ())
-term = printAscii <$> argWidth <*> fileName
+term = printAscii <$> fileName <*> (outPutSize <$> argWidth <*> argHeight <*> argFit)
 
 main :: IO ()
 main = run (term, termInfo)
