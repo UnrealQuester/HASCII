@@ -21,6 +21,9 @@ argWidth = value $ opt Nothing (optInfo ["w", "width"]) {optName = "WIDTH", optD
 argFit :: Term Bool
 argFit = value $ flag (optInfo ["fit-height"]) {optDoc = "Fit the image to the terminal height instead of width"}
 
+argChars :: Term String
+argChars = value $ opt "█▓▒░" (optInfo ["c", "characters"]) {optName = "CHARACTERS", optDoc = "What characters to use for the image"}
+
 addTo :: a -> [[a]] -> [[a]]
 addTo x = fmap (x:)
 
@@ -71,21 +74,18 @@ imgHeight img = imgHeight' $ shape img
     where
         imgHeight' (Z :. h :. _) = h
 
-asciiChars :: [Char]
-asciiChars = "█▓▒░"
-
-pixelToAscii :: GreyPixel -> H.Histogram DIM1 Int -> Char
-pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 3) asciiChars
+pixelToAscii :: GreyPixel -> H.Histogram DIM1 Int -> String -> Char
+pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 3)
     where
         pixelToAscii' [] (c:_) = c
         pixelToAscii' (x:xs) (c:cs) = if fromIntegral pix < x then c else pixelToAscii' xs cs
         gnorm = H.normalize 1.0 hist
 
-toAsciiRow :: Grey -> Int -> String
-toAsciiRow img y = fmap (\x -> pixelToAscii (index img (Z:. y :. x)) (H.histogram Nothing img :: H.Histogram DIM1 Int)) [0 .. imgWidth img - 1]
+toAsciiRow :: Grey -> String -> Int -> String
+toAsciiRow img asciiChars y = fmap (\x -> pixelToAscii (index img (Z:. y :. x)) (H.histogram Nothing img :: H.Histogram DIM1 Int) asciiChars) [0 .. imgWidth img - 1]
 
-toAscii :: RGB -> [String]
-toAscii img = fmap (toAsciiRow greyscale) (reverse [0 .. imgHeight greyscale - 1]) where
+toAscii :: RGB -> String -> [String]
+toAscii img asciiChars = fmap (toAsciiRow greyscale asciiChars) (reverse [0 .. imgHeight greyscale - 1]) where
     greyscale = convert img :: Grey
 
 printLines :: [String] -> IO ()
@@ -105,8 +105,8 @@ outPutSize _ _ shouldFitToHeight = do
     else
         return (fitToWidth $ maybe 75 T.width terminalSize)
 
-printAscii :: Maybe String -> IO (RGB -> RGB) -> IO ()
-printAscii file transform = do
+printAscii :: Maybe String -> String -> IO (RGB -> RGB) -> IO ()
+printAscii file asciiChars transform = do
     imgage <- maybe (loadBS Nothing =<< BS.getContents) (load Nothing) file
     case imgage of
         Right img -> do
@@ -114,12 +114,12 @@ printAscii file transform = do
             let
                 rgb = convert img ::RGB
                 miniature = trans rgb
-                asciiArt = toAscii miniature
+                asciiArt = toAscii miniature asciiChars
             printLines asciiArt
         Left err -> print err
 
 term :: Term (IO ())
-term = printAscii <$> fileName <*> (outPutSize <$> argWidth <*> argHeight <*> argFit)
+term = printAscii <$> fileName <*> argChars <*> (outPutSize <$> argWidth <*> argHeight <*> argFit)
 
 main :: IO ()
 main = run (term, termInfo)
