@@ -32,6 +32,7 @@ thresholds 1 m = fmap (:[]) [m+1 .. 254]
 thresholds n m = concatMap (\x -> addTo x (thresholds (n-1) x)) [m+1 .. 255-n]
 
 toRange :: [Int] -> [(Int, Int)]
+toRange []       = [(0, 255)]
 toRange ( [v]  ) = [(v, 255)]
 toRange (u:v:xs) = (u, v-1) : toRange (v:xs)
 
@@ -77,6 +78,7 @@ imgHeight img = imgHeight' $ shape img
 pixelToAscii :: GreyPixel -> H.Histogram DIM1 Int -> String -> Char
 pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 3)
     where
+        pixelToAscii' _ [] = ' '
         pixelToAscii' [] (c:_) = c
         pixelToAscii' (x:xs) (c:cs) = if fromIntegral pix < x then c else pixelToAscii' xs cs
         gnorm = H.normalize 1.0 hist
