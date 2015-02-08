@@ -9,6 +9,14 @@ import Data.List (maximumBy)
 import Data.Ord (comparing)
 import qualified Data.ByteString as BS
 
+data FitMode = FitToWidth | FitToHeight | FitToSmallest | Original deriving (Eq)
+
+instance ArgVal FitMode where
+    converter = enum [ ("width", FitToWidth)
+                     , ("height", FitToHeight)
+                     , ("original", Original)
+                     , ("smallest", FitToSmallest)]
+
 fileName :: Term (Maybe String)
 fileName = value $ pos 0 Nothing posInfo {posName = "FILENAME", posDoc = "path to the file to be converted to ascii"}
 
@@ -18,8 +26,8 @@ argHeight = value $ opt Nothing (optInfo ["h", "height"]) {optName = "HEIGHT", o
 argWidth :: Term (Maybe Int)
 argWidth = value $ opt Nothing (optInfo ["w", "width"]) {optName = "WIDTH", optDoc = "Width of the output in characters"}
 
-argFit :: Term Bool
-argFit = value $ flag (optInfo ["fit-height"]) {optDoc = "Fit the image to the terminal height instead of width"}
+argFit :: Term FitMode
+argFit = value $ opt FitToWidth (optInfo ["fit-mode"]) {optDoc = "How the image should be resized"}
 
 argChars :: Term String
 argChars = value $ opt "█▓▒░" (optInfo ["c", "characters"]) {optName = "CHARACTERS", optDoc = "What characters to use for the image"}
@@ -96,16 +104,22 @@ printLines = mapM_ putStrLn
 termInfo :: TermInfo
 termInfo = defTI { termName = "HASCII", version = "1.0"  }
 
-outPutSize :: Maybe Int -> Maybe Int -> Bool -> IO (RGB -> RGB)
-outPutSize (Just w) (Just h) _   = return $ resize TruncateInteger (ix2 h w)
-outPutSize (Just w) _ _          = return $ fitToWidth w
-outPutSize _ (Just h) _          = return $ fitToHeight h
-outPutSize _ _ shouldFitToHeight = do
-    terminalSize <- T.size
-    if shouldFitToHeight then
-        return (fitToHeight $ maybe 75 T.height terminalSize)
-    else
-        return (fitToWidth $ maybe 75 T.width terminalSize)
+outPutSize :: Maybe Int -> Maybe Int -> FitMode -> IO (RGB -> RGB)
+outPutSize (Just w) (Just h) _ = return $ resize TruncateInteger (ix2 h w)
+outPutSize (Just w) _ _        = return $ fitToWidth w
+outPutSize _ (Just h) _        = return $ fitToHeight h
+outPutSize _ _ Original        = return (\x -> fitToWidth (imgWidth x) x)
+outPutSize _ _ FitToHeight     = fitToHeight <$> maybe 75 T.height <$> T.size
+outPutSize _ _ FitToWidth      = fitToWidth  <$> maybe 75 T.width  <$> T.size
+outPutSize _ _ FitToSmallest   = do
+    size <- T.size
+    case size of
+        Nothing -> outPutSize (Just 75) Nothing Original
+        Just s -> if T.width s < T.height s then
+                    outPutSize Nothing Nothing FitToWidth
+                  else
+                    outPutSize Nothing Nothing FitToHeight
+
 
 printAscii :: Maybe String -> String -> IO (RGB -> RGB) -> IO ()
 printAscii file asciiChars transform = do
