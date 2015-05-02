@@ -35,17 +35,13 @@ argChars = value $ opt "█▓▒░" (optInfo ["c", "characters"]) {optName = "
 addTo :: a -> [[a]] -> [[a]]
 addTo x = fmap (x:)
 
-thresholds :: Int -> Int -> [[Int]]
-thresholds 1 m = fmap (:[]) [m+1 .. 254]
-thresholds n m = concatMap (\x -> addTo x (thresholds (n-1) x)) [m+1 .. 255-n]
+ranges :: Int -> Int -> [[(Int, Int)]]
+ranges start 1 = fmap (:[]) $ (,) start <$> [start .. 255]
+ranges start 2 = concatMap (\x -> addTo x [[((snd x) + 1 ,255)]]) $ (,) start <$> [start .. 256 - 2]
+ranges start n = concatMap (\x -> addTo x (ranges ((snd x) + 1) (n - 1))) $ (,) start <$> [start .. 256 - n]
 
-toRange :: [Int] -> [(Int, Int)]
-toRange []       = [(0, 255)]
-toRange ( [v]  ) = [(v, 255)]
-toRange (u:v:xs) = (u, v-1) : toRange (v:xs)
-
-sigma :: H.Histogram DIM1 Double -> [Int] -> Double
-sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> toRange thresh
+sigma :: H.Histogram DIM1 Double -> [(Int, Int)] -> Double
+sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> thresh
     where
         histVec = H.vector hist
         interClassVariance u v = s u v ^ (2::Integer) / p u v
@@ -59,7 +55,7 @@ sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> toRange th
 
 
 multiOtsu :: H.Histogram DIM1 Double -> Int -> [Int]
-multiOtsu hist n = fst $ maximumBy (comparing snd) $ fmap (\x -> (x, sigma hist (0:x))) (thresholds n 1)
+multiOtsu hist n = fst $ maximumBy (comparing snd) $ fmap (\x -> (snd <$>  x, sigma hist x)) (ranges 0 n)
 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
@@ -84,11 +80,11 @@ imgHeight img = imgHeight' $ shape img
         imgHeight' (Z :. h :. _) = h
 
 pixelToAscii :: GreyPixel -> H.Histogram DIM1 Int -> String -> Char
-pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 3)
+pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 4)
     where
         pixelToAscii' _ [] = ' '
         pixelToAscii' [] (c:_) = c
-        pixelToAscii' (x:xs) (c:cs) = if fromIntegral pix < x then c else pixelToAscii' xs cs
+        pixelToAscii' (x:xs) (c:cs) = if fromIntegral pix <= x then c else pixelToAscii' xs cs
         gnorm = H.normalize 1.0 hist
 
 toAsciiRow :: Grey -> String -> Int -> String
