@@ -1,3 +1,4 @@
+import Prelude hiding (map, concatMap, sum, reverse, length)
 import qualified Data.Vector.Storable as V
 import Control.Applicative
 import Vision.Image hiding (map)
@@ -5,8 +6,9 @@ import Vision.Primitive
 import qualified Vision.Histogram as H
 import qualified System.Console.Terminal.Size as T
 import System.Console.CmdTheLine
-import Data.List (maximumBy)
+import Data.List.Stream
 import Data.Ord (comparing)
+import Control.Parallel.Strategies
 import qualified Data.ByteString as BS
 
 data FitMode = FitToWidth | FitToHeight | FitToSmallest | Original deriving (Eq)
@@ -33,11 +35,11 @@ argChars :: Term String
 argChars = value $ opt "█▓▒░" (optInfo ["c", "characters"]) {optName = "CHARACTERS", optDoc = "What characters to use for the image"}
 
 addTo :: a -> [[a]] -> [[a]]
-addTo x = fmap (x:)
+addTo x = map (x:)
 
 ranges :: Int -> Int -> [[(Int, Int)]]
-ranges start 1 = fmap (:[]) $ (,) start <$> [start .. 255]
-ranges start 2 = concatMap (\x -> addTo x [[((snd x) + 1 ,255)]]) $ (,) start <$> [start .. 256 - 2]
+ranges start 1 = map (:[]) $ (,) start <$> [start .. 255]
+ranges start 2 = concatMap (\x -> addTo x [[((snd x) + 1, 255)]]) $ (,) start <$> [start .. 256 - 2]
 ranges start n = concatMap (\x -> addTo x (ranges ((snd x) + 1) (n - 1))) $ (,) start <$> [start .. 256 - n]
 
 sigma :: H.Histogram DIM1 Double -> [(Int, Int)] -> Double
@@ -53,9 +55,8 @@ sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> thresh
         p u v = lP v - lP u
         s u v = lS v - lS u
 
-
 multiOtsu :: H.Histogram DIM1 Double -> Int -> [Int]
-multiOtsu hist n = fst $ maximumBy (comparing snd) $ fmap (\x -> (snd <$>  x, sigma hist x)) (ranges 0 n)
+multiOtsu hist n = fst $ maximumBy (comparing snd) $ map (\x -> (snd <$> x, sigma hist x)) (ranges 0 n)
 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
@@ -88,10 +89,10 @@ pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 4)
         gnorm = H.normalize 1.0 hist
 
 toAsciiRow :: Grey -> String -> Int -> String
-toAsciiRow img asciiChars y = fmap (\x -> pixelToAscii (index img (Z:. y :. x)) (H.histogram Nothing img :: H.Histogram DIM1 Int) asciiChars) [0 .. imgWidth img - 1]
+toAsciiRow img asciiChars y = map (\x -> pixelToAscii (index img (Z:. y :. x)) (H.histogram Nothing img :: H.Histogram DIM1 Int) asciiChars) [0 .. imgWidth img - 1]
 
 toAscii :: RGB -> String -> [String]
-toAscii img asciiChars = fmap (toAsciiRow greyscale asciiChars) (reverse [0 .. imgHeight greyscale - 1]) where
+toAscii img asciiChars = map (toAsciiRow greyscale asciiChars) (reverse [0 .. imgHeight greyscale - 1]) where
     greyscale = convert img :: Grey
 
 printLines :: [String] -> IO ()
