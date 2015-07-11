@@ -8,7 +8,6 @@ import qualified System.Console.Terminal.Size as T
 import System.Console.CmdTheLine
 import Data.List.Stream
 import Data.Ord (comparing)
-import Control.Parallel.Strategies
 import qualified Data.ByteString as BS
 
 data FitMode = FitToWidth | FitToHeight | FitToSmallest | Original deriving (Eq)
