@@ -101,14 +101,14 @@ termInfo :: TermInfo
 termInfo = defTI { termName = "HASCII", version = "1.0"  }
 
 outPutSize :: Maybe Int -> Maybe Int -> FitMode -> IO (RGB -> RGB)
+outPutSize (Just w) (Just h) FitToSmallest  | w < h = outPutSize (Just w) Nothing FitToSmallest
+                                            | otherwise = outPutSize Nothing (Just h) FitToSmallest
 outPutSize (Just w) (Just h) _              = return $ resize TruncateInteger (ix2 h w)
 outPutSize (Just w) _ _                     = return $ fitToWidth w
 outPutSize _ (Just h) _                     = return $ fitToHeight h
 outPutSize _ _ Original                     = return (\x -> fitToWidth (imgWidth x) x)
 outPutSize _ _ FitToHeight                  = fitToHeight <$> maybe 75 T.height <$> T.size
 outPutSize _ _ FitToWidth                   = fitToWidth  <$> maybe 75 T.width  <$> T.size
-outPutSize (Just w) (Just h) FitToSmallest  | w < h = outPutSize (Just w) Nothing FitToSmallest
-                                            | otherwise = outPutSize Nothing (Just h) FitToSmallest
 outPutSize _ _ FitToSmallest   = do
     size <- T.size
     case size of
