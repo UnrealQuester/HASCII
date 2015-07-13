@@ -31,7 +31,7 @@ argFit :: Term FitMode
 argFit = value $ opt FitToWidth (optInfo ["fit-mode"]) {optDoc = "How the image should be resized"}
 
 argChars :: Term String
-argChars = value $ opt "█▓▒░" (optInfo ["c", "characters"]) {optName = "CHARACTERS", optDoc = "What characters to use for the image"}
+argChars = value $ opt (reverse "█▓▒░") (optInfo ["c", "characters"]) {optName = "CHARACTERS", optDoc = "What characters to use for the image"}
 
 addTo :: a -> [[a]] -> [[a]]
 addTo x = map (x:)
