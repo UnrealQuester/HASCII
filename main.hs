@@ -110,7 +110,7 @@ outPutSize _ _ Original                     = return (\x -> fitToWidth (imgWidth
 outPutSize _ _ FitToHeight                  = fitToHeight <$> maybe 75 T.height <$> T.size
 outPutSize _ _ FitToWidth                   = fitToWidth  <$> maybe 75 T.width  <$> T.size
 outPutSize _ _ FitToSmallest   = do
-    size <- T.size
+    size <- T.size :: IO (Maybe (T.Window Integer))
     case size of
         Nothing -> outPutSize (Just 75) Nothing Original
         Just s -> if T.width s < T.height s then
