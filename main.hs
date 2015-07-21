@@ -1,6 +1,7 @@
 import Prelude hiding (map, concatMap, sum, reverse, length)
 import qualified Data.Vector.Storable as V
 import Control.Applicative
+import Control.Arrow
 import Vision.Image hiding (map)
 import Vision.Primitive
 import qualified Vision.Histogram as H
@@ -55,7 +56,7 @@ sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> thresh
         s u v = lS v - lS u
 
 multiOtsu :: H.Histogram DIM1 Double -> Int -> [Int]
-multiOtsu hist n = fst $ maximumBy (comparing snd) $ map (\x -> (snd <$> x, sigma hist x)) (ranges 0 n)
+multiOtsu hist n = fst $ maximumBy (comparing snd) $ map ((<$>) snd &&& sigma hist) (ranges 0 n)
 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
