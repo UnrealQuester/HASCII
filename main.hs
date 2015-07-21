@@ -38,9 +38,12 @@ addTo :: a -> [[a]] -> [[a]]
 addTo x = map (x:)
 
 ranges :: Int -> Int -> [[(Int, Int)]]
-ranges start 1 = map (:[]) $ (,) start <$> [start .. 255]
-ranges start 2 = concatMap (\x -> addTo x [[((snd x) + 1, 255)]]) $ (,) start <$> [start .. 256 - 2]
-ranges start n = concatMap (\x -> addTo x (ranges ((snd x) + 1) (n - 1))) $ (,) start <$> [start .. 256 - n]
+ranges start 1 = map (:[]) (range start 255)
+ranges start 2 = concatMap (\x -> addTo x [[(snd x + 1, 255)]]) (range start (256 - 2))
+ranges start n = concatMap (\x -> addTo x (ranges (snd x + 1) (n - 1))) (range start (256 - n))
+
+range :: Int -> Int -> [(Int, Int)]
+range start end = map ((,) start) [start .. end]
 
 sigma :: H.Histogram DIM1 Double -> [(Int, Int)] -> Double
 sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> thresh
