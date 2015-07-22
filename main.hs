@@ -1,8 +1,10 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 import Prelude hiding (map, concatMap, sum, reverse, length, head)
 import qualified Data.Vector.Storable as V
 import Control.Applicative
 import Control.Arrow
 import Vision.Image hiding (map)
+import Vision.Image.Storage.DevIL
 import Vision.Primitive
 import qualified Vision.Histogram as H
 import qualified System.Console.Terminal.Size as T
@@ -123,16 +125,20 @@ outPutSize _ _ FitToSmallest   = do
                   else
                     outPutSize Nothing Nothing FitToHeight
 
+readImageInput :: IO (Either StorageError RGB)
+readImageInput = loadBS Autodetect <$> BS.getContents
+
+readImageFile :: FilePath -> IO (Either StorageError RGB)
+readImageFile = load Autodetect
 
 printAscii :: Maybe String -> String -> IO (RGB -> RGB) -> IO ()
 printAscii file asciiChars transform = do
-    imgage <- maybe (loadBS Nothing =<< BS.getContents) (load Nothing) file
+    imgage <- maybe readImageInput readImageFile file
     case imgage of
-        Right img -> do
+        Right (img :: RGB) -> do
             trans <- transform
             let
-                rgb = convert img ::RGB
-                miniature = trans rgb
+                miniature = trans img
                 asciiArt = toAscii miniature asciiChars
             printLines asciiArt
         Left err -> print err
