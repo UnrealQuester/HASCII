@@ -98,7 +98,7 @@ toAsciiRow :: Grey -> String -> Int -> String
 toAsciiRow img asciiChars y = map (\x -> pixelToAscii (index img (Z:. y :. x)) (H.histogram Nothing img :: H.Histogram DIM1 Int) asciiChars) [0 .. imgWidth img - 1]
 
 toAscii :: RGB -> String -> [String]
-toAscii img asciiChars = map (toAsciiRow greyscale asciiChars) (reverse [0 .. imgHeight greyscale - 1]) where
+toAscii img asciiChars = map (toAsciiRow greyscale asciiChars) [0 .. imgHeight greyscale - 1] where
     greyscale = convert img :: Grey
 
 printLines :: [String] -> IO ()
