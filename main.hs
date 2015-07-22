@@ -1,4 +1,4 @@
-import Prelude hiding (map, concatMap, sum, reverse, length)
+import Prelude hiding (map, concatMap, sum, reverse, length, head)
 import qualified Data.Vector.Storable as V
 import Control.Applicative
 import Control.Arrow
@@ -34,23 +34,24 @@ argFit = value $ opt FitToWidth (optInfo ["fit-mode"]) {optDoc = "How the image 
 argChars :: Term String
 argChars = value $ opt (reverse "█▓▒░") (optInfo ["c", "characters"]) {optName = "CHARACTERS", optDoc = "What characters to use for the image"}
 
-addTo :: a -> [[a]] -> [[a]]
-addTo x = map (x:)
+range :: Int -> [(Int, Int)] -> [[(Int, Int)]]
+range 0 xs = [xs]
+range n xs = concatMap (range (n-1) . splitRange xs) ((rangePair . head) xs)
 
-ranges :: Int -> Int -> [[(Int, Int)]]
-ranges start 1 = map (:[]) (range start 255)
-ranges start 2 = concatMap (\x -> addTo x [[(snd x + 1, 255)]]) (range start (256 - 2))
-ranges start n = concatMap (\x -> addTo x (ranges (snd x + 1) (n - 1))) (range start (256 - n))
+rangePair :: (Int, Int) -> [Int]
+rangePair p = [fst p .. snd p - 1]
 
-range :: Int -> Int -> [(Int, Int)]
-range start end = map ((,) start) [start .. end]
+splitRange :: [(Int, Int)] -> Int -> [(Int, Int)]
+splitRange [] _ = []
+splitRange (x:xs) n = (fst x, n) : (n + 1, snd x) : xs
 
 sigma :: H.Histogram DIM1 Double -> [(Int, Int)] -> Double
-sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> thresh
+sigma hist thresh = sum $ uncurry interClassVariance <$> thresh
     where
         histVec = H.vector hist
-        interClassVariance u v = s u v ^ (2::Integer) / p u v
-        replaceNaN = map (\x -> if isNaN x then 0 else x)
+        interClassVariance u v | puv == 0 = 0
+                               | otherwise = s u v ^ (2::Integer) / puv where
+                                   puv = p u v
         lS = (sumVec V.!)
         multVec = V.imap (\i x -> fromIntegral (i+1) * x) histVec
         sumVec = V.postscanl (+) 0 multVec
@@ -59,7 +60,7 @@ sigma hist thresh = sum $ replaceNaN $ uncurry interClassVariance <$> thresh
         s u v = lS v - lS u
 
 multiOtsu :: H.Histogram DIM1 Double -> Int -> [Int]
-multiOtsu hist n = fst $ maximumBy (comparing snd) $ map ((<$>) snd &&& sigma hist) (ranges 0 n)
+multiOtsu hist n = fst $ maximumBy (comparing snd) $ map ((<$>) snd &&& sigma hist) (range n [(0, 255)])
 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
@@ -84,7 +85,7 @@ imgHeight img = imgHeight' $ shape img
         imgHeight' (Z :. h :. _) = h
 
 pixelToAscii :: GreyPixel -> H.Histogram DIM1 Int -> String -> Char
-pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 4)
+pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 3)
     where
         pixelToAscii' _ [] = ' '
         pixelToAscii' [] (c:_) = c
