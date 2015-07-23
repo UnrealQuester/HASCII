@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-import Prelude hiding (map, concatMap, sum, reverse, length, head)
+import Prelude hiding (map, concatMap, sum, reverse, length, head, lookup)
 import qualified Data.Vector.Storable as V
 import Control.Applicative
 import Control.Arrow
@@ -8,33 +8,52 @@ import Vision.Image.Storage.DevIL
 import Vision.Primitive
 import qualified Vision.Histogram as H
 import qualified System.Console.Terminal.Size as T
-import System.Console.CmdTheLine
 import Data.List.Stream
 import Data.Ord (comparing)
 import qualified Data.ByteString as BS
+import Options.Applicative
 
 data FitMode = FitToWidth | FitToHeight | FitToSmallest | Original deriving (Eq)
 
-instance ArgVal FitMode where
-    converter = enum [ ("width", FitToWidth)
-                     , ("height", FitToHeight)
-                     , ("original", Original)
-                     , ("smallest", FitToSmallest)]
+data CmdOptions = CmdOptions
+    { argFileName :: Maybe FilePath
+    , argHeight   :: Maybe Int
+    , argWidth    :: Maybe Int
+    , argFitMode  :: FitMode
+    , argSymbols  :: String }
 
-fileName :: Term (Maybe String)
-fileName = value $ pos 0 Nothing posInfo {posName = "FILENAME", posDoc = "path to the file to be converted to ascii"}
+parseOptions :: Parser CmdOptions
+parseOptions = CmdOptions
+    <$> parseFilename
+    <*> parseHeight
+    <*> parseWidth
+    <*> parseFitMode
+    <*> parseSymbols
 
-argHeight :: Term (Maybe Int)
-argHeight = value $ opt Nothing (optInfo ["h", "height"]) {optName = "HEIGHT", optDoc = "Height of the output in characters"}
+parseFilename :: Parser (Maybe String)
+parseFilename = optional $ argument str (metavar "FILENAME" <> help "Path to the file to be converted to ascii")
 
-argWidth :: Term (Maybe Int)
-argWidth = value $ opt Nothing (optInfo ["w", "width"]) {optName = "WIDTH", optDoc = "Width of the output in characters"}
+parseHeight :: Parser (Maybe Int)
+parseHeight = optional $ option auto (long "height" <> short 'h' <> metavar "HEIGHT" <> help "Height of the output in characters")
 
-argFit :: Term FitMode
-argFit = value $ opt FitToWidth (optInfo ["fit-mode"]) {optDoc = "How the image should be resized"}
+parseWidth :: Parser (Maybe Int)
+parseWidth = optional $ option auto (long "width" <> short 'w' <> metavar "WIDTH" <> help "Width of the output in characters")
 
-argChars :: Term String
-argChars = value $ opt (reverse "█▓▒░") (optInfo ["c", "characters"]) {optName = "CHARACTERS", optDoc = "What characters to use for the image"}
+parseSymbols :: Parser String
+parseSymbols = option auto (long "characters" <> short 'c' <> value (reverse "█▓▒░") <> metavar "CHARACTERS" <> help "What characters to use for the image")
+
+fitModes :: String -> ReadM FitMode
+fitModes s = do
+    let modes = [("width", FitToWidth), ("height", FitToHeight), ("original", Original), ("smallest", FitToSmallest)]
+    let val = lookup s modes
+    case val of
+      Nothing -> readerError "Not a valid mode"
+      Just x -> return x
+
+parseFitMode :: Parser FitMode
+parseFitMode = option
+    (str >>= fitModes)
+    (value FitToWidth <> long "mode" <> short 'm' <> metavar "width|height|original|smallest" <> help "How the image should be resized")
 
 range :: Int -> [(Int, Int)] -> [[(Int, Int)]]
 range 0 xs = [xs]
@@ -104,9 +123,6 @@ toAscii img asciiChars = map (toAsciiRow greyscale asciiChars) [0 .. imgHeight g
 printLines :: [String] -> IO ()
 printLines = mapM_ putStrLn
 
-termInfo :: TermInfo
-termInfo = defTI { termName = "HASCII", version = "1.0"  }
-
 outPutSize :: Maybe Int -> Maybe Int -> FitMode -> IO (RGB -> RGB)
 outPutSize (Just w) (Just h) FitToSmallest  | w < h = outPutSize (Just w) Nothing FitToSmallest
                                             | otherwise = outPutSize Nothing (Just h) FitToSmallest
@@ -131,20 +147,18 @@ readImageInput = loadBS Autodetect <$> BS.getContents
 readImageFile :: FilePath -> IO (Either StorageError RGB)
 readImageFile = load Autodetect
 
-printAscii :: Maybe String -> String -> IO (RGB -> RGB) -> IO ()
-printAscii file asciiChars transform = do
-    imgage <- maybe readImageInput readImageFile file
+printAscii :: CmdOptions -> IO ()
+printAscii options = do
+    transform <- outPutSize (argWidth options) (argHeight options) (argFitMode options)
+    imgage <- maybe readImageInput readImageFile (argFileName options)
     case imgage of
         Right (img :: RGB) -> do
-            trans <- transform
             let
-                miniature = trans img
-                asciiArt = toAscii miniature asciiChars
+                miniature = transform img
+                asciiArt = toAscii miniature (argSymbols options)
             printLines asciiArt
         Left err -> print err
 
-term :: Term (IO ())
-term = printAscii <$> fileName <*> argChars <*> (outPutSize <$> argWidth <*> argHeight <*> argFit)
-
 main :: IO ()
-main = run (term, termInfo)
+main = execParser opts >>= printAscii where
+    opts = info (helper <*> parseOptions) mempty
