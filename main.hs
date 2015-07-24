@@ -11,7 +11,7 @@ import qualified System.Console.Terminal.Size as T
 import Data.List.Stream
 import Data.Ord (comparing)
 import qualified Data.ByteString as BS
-import Options.Applicative
+import Options.Applicative hiding(helper)
 
 data FitMode = FitToWidth | FitToHeight | FitToSmallest | Original deriving (Eq)
 
@@ -32,6 +32,12 @@ parseOptions = CmdOptions
 
 parseFilename :: Parser (Maybe String)
 parseFilename = optional $ argument str (metavar "FILENAME" <> help "Path to the file to be converted to ascii")
+
+helper :: Parser (a -> a)
+helper = abortOption ShowHelpText $ mconcat
+  [ long "help"
+  , help "Show this help text"
+  , hidden ]
 
 parseHeight :: Parser (Maybe Int)
 parseHeight = optional $ option auto (long "height" <> short 'h' <> metavar "HEIGHT" <> help "Height of the output in characters")
@@ -154,11 +160,11 @@ printAscii options = do
     case imgage of
         Right (img :: RGB) -> do
             let
-                miniature = transform img
+                miniature = (convert . transform) img
                 asciiArt = toAscii miniature (argSymbols options)
             printLines asciiArt
         Left err -> print err
 
 main :: IO ()
 main = execParser opts >>= printAscii where
-    opts = info (helper <*> parseOptions) mempty
+    opts = info (helper <*> parseOptions) (fullDesc)
