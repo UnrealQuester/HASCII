@@ -46,7 +46,7 @@ parseWidth :: Parser (Maybe Int)
 parseWidth = optional $ option auto (long "width" <> short 'w' <> metavar "WIDTH" <> help "Width of the output in characters")
 
 parseSymbols :: Parser String
-parseSymbols = option auto (long "characters" <> short 'c' <> value (reverse "█▓▒░") <> metavar "CHARACTERS" <> help "What characters to use for the image")
+parseSymbols = strOption (long "characters" <> short 'c' <> value (reverse "█▓▒░") <> metavar "CHARACTERS" <> help "What characters to use for the image")
 
 fitModes :: String -> ReadM FitMode
 fitModes s = do
