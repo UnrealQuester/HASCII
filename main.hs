@@ -1,17 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 import Prelude hiding (map, concatMap, sum, reverse, length, head, lookup)
-import qualified Data.Vector.Storable as V
 import Control.Applicative
-import Control.Arrow
 import Vision.Image hiding (map)
 import Vision.Image.Storage.DevIL
 import Vision.Primitive
 import qualified Vision.Histogram as H
 import qualified System.Console.Terminal.Size as T
 import Data.List.Stream
-import Data.Ord (comparing)
 import qualified Data.ByteString as BS
 import Options.Applicative hiding(helper)
+import Otsu
 
 data FitMode = FitToWidth | FitToHeight | FitToSmallest | Original deriving (Eq)
 
@@ -34,10 +32,7 @@ parseFilename :: Parser (Maybe String)
 parseFilename = optional $ argument str (metavar "FILENAME" <> help "Path to the file to be converted to ascii")
 
 helper :: Parser (a -> a)
-helper = abortOption ShowHelpText $ mconcat
-  [ long "help"
-  , help "Show this help text"
-  , hidden ]
+helper = abortOption ShowHelpText (long "help" <> help "Show this help text" <> hidden)
 
 parseHeight :: Parser (Maybe Int)
 parseHeight = optional $ option auto (long "height" <> short 'h' <> metavar "HEIGHT" <> help "Height of the output in characters")
@@ -61,33 +56,6 @@ parseFitMode = option
     (str >>= fitModes)
     (value FitToWidth <> long "mode" <> short 'm' <> metavar "width|height|original|smallest" <> help "How the image should be resized")
 
-range :: Int -> [(Int, Int)] -> [[(Int, Int)]]
-range 0 xs = [xs]
-range n xs = concatMap (range (n-1) . splitRange xs) ((rangePair . head) xs)
-
-rangePair :: (Int, Int) -> [Int]
-rangePair p = [fst p .. snd p - 1]
-
-splitRange :: [(Int, Int)] -> Int -> [(Int, Int)]
-splitRange [] _ = []
-splitRange (x:xs) n = (fst x, n) : (n + 1, snd x) : xs
-
-sigma :: H.Histogram DIM1 Double -> [(Int, Int)] -> Double
-sigma hist thresh = sum $ uncurry interClassVariance <$> thresh
-    where
-        histVec = H.vector hist
-        interClassVariance u v | puv == 0 = 0
-                               | otherwise = s u v ^ (2::Integer) / puv where
-                                   puv = p u v
-        lS = (sumVec V.!)
-        multVec = V.imap (\i x -> fromIntegral (i+1) * x) histVec
-        sumVec = V.postscanl (+) 0 multVec
-        lP = (V.postscanl (+) 0 histVec V.!)
-        p u v = lP v - lP u
-        s u v = lS v - lS u
-
-multiOtsu :: H.Histogram DIM1 Double -> Int -> [Int]
-multiOtsu hist n = fst $ maximumBy (comparing snd) $ map ((<$>) snd &&& sigma hist) (range n [(0, 255)])
 
 fitToWidth :: Int -> RGB -> RGB
 fitToWidth width img = resize TruncateInteger (ix2 height width) img
@@ -111,20 +79,15 @@ imgHeight img = imgHeight' $ shape img
     where
         imgHeight' (Z :. h :. _) = h
 
-pixelToAscii :: GreyPixel -> H.Histogram DIM1 Int -> String -> Char
-pixelToAscii pix hist = pixelToAscii' (multiOtsu gnorm 3)
-    where
+toAscii :: Grey -> String -> [String]
+toAscii img asciiChars = map toAsciiRow [0 .. imgHeight img - 1] where
+    toAsciiRow y = map (\x -> pixelToAscii (index img (Z:. y :. x)) asciiChars) [0 .. imgWidth img - 1]
+    hist = H.histogram Nothing img :: H.Histogram DIM1 Int
+    gnorm = H.vector $ H.normalize 1.0 hist
+    pixelToAscii pix = pixelToAscii' (multiOtsu gnorm 3) where
         pixelToAscii' _ [] = ' '
         pixelToAscii' [] (c:_) = c
         pixelToAscii' (x:xs) (c:cs) = if fromIntegral pix <= x then c else pixelToAscii' xs cs
-        gnorm = H.normalize 1.0 hist
-
-toAsciiRow :: Grey -> String -> Int -> String
-toAsciiRow img asciiChars y = map (\x -> pixelToAscii (index img (Z:. y :. x)) (H.histogram Nothing img :: H.Histogram DIM1 Int) asciiChars) [0 .. imgWidth img - 1]
-
-toAscii :: RGB -> String -> [String]
-toAscii img asciiChars = map (toAsciiRow greyscale asciiChars) [0 .. imgHeight greyscale - 1] where
-    greyscale = convert img :: Grey
 
 printLines :: [String] -> IO ()
 printLines = mapM_ putStrLn
