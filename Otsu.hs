@@ -21,17 +21,16 @@ splitRange [] _ = []
 splitRange (x:xs) n = (fst x, n) : (n + 1, snd x) : xs
 
 sigma :: V.Vector Double -> [(Int, Int)] -> Double
-sigma histVec thresh = sum $ uncurry interClassVariance <$> thresh
+sigma histVec thresh = sum $ map (uncurry interClassVariance) thresh
     where
         interClassVariance u v | puv == 0 = 0
                                | otherwise = s u v ^ (2::Integer) / puv where
-                                   puv = p u v
-        lS = (sumVec V.!)
+                                    puv = p u v
         multVec = V.imap (\i x -> fromIntegral (i+1) * x) histVec
         sumVec = V.postscanl (+) 0 multVec
-        lP = (V.postscanl (+) 0 histVec V.!)
-        p u v = lP v - lP u
-        s u v = lS v - lS u
+        lP = V.postscanl (+) 0 histVec
+        p  u v = lP V.! v - lP V.! u
+        s  u v = sumVec V.! v - sumVec V.! u
 
 multiOtsu :: V.Vector Double -> Int -> [Int]
 multiOtsu histVec n = fst $ maximumBy (comparing snd) $ map ((<$>) snd &&& sigma histVec) (range n [(0, 255)])
