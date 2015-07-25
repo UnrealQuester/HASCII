@@ -48,16 +48,16 @@ cabal-version:       >=1.10
 executable hascii
   -- .hs or .lhs file containing the Main module.
   main-is:             main.hs
-  ghc-options:         -O2 -Wall
   
   -- Modules included in this executable, other than Main.
-  -- other-modules:       
+  ghc-options:       -O2
+                     -Wall
   
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.6 && <5, friday, friday-devil, terminal-size, optparse-applicative, vector, bytestring >=0.10 && <1.0, stream-fusion == 0.1.2.5, parallel == 3.2.0.6
+  build-depends:       base >=4.6 && <5, friday, friday-devil, terminal-size, optparse-applicative, vector, bytestring, stream-fusion
 
   
   -- Directories containing source files.
