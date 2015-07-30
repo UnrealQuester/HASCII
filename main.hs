@@ -1,12 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-import Prelude hiding (map, concatMap, sum, reverse, length, head, lookup)
 import Control.Applicative
 import Vision.Image hiding (map)
 import Vision.Image.Storage.DevIL
 import Vision.Primitive
 import qualified Vision.Histogram as H
+import qualified Data.Vector as V
 import qualified System.Console.Terminal.Size as T
-import Data.List.Stream
 import qualified Data.ByteString as BS
 import Options.Applicative hiding(helper)
 import Otsu
@@ -83,7 +82,7 @@ toAscii :: Grey -> String -> [String]
 toAscii img asciiChars = map toAsciiRow [0 .. imgHeight img - 1] where
     toAsciiRow y = map (\x -> pixelToAscii (index img (Z:. y :. x)) asciiChars) [0 .. imgWidth img - 1]
     hist = H.histogram Nothing img :: H.Histogram DIM1 Int
-    gnorm = H.vector $ H.normalize 1.0 hist
+    gnorm = V.convert $ H.vector $ H.normalize 1.0 hist
     pixelToAscii pix = pixelToAscii' (multiOtsu gnorm 3) where
         pixelToAscii' _ [] = ' '
         pixelToAscii' [] (c:_) = c

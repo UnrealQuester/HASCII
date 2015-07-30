@@ -2,10 +2,8 @@ module Otsu (
     multiOtsu
     ) where
 
-import Prelude hiding (map, concatMap, sum, reverse, length, head, lookup)
-import qualified Data.Vector.Storable as V
+import qualified Data.Vector as V
 import Data.Ord (comparing)
-import Data.List.Stream
 import Control.Arrow
 import Control.Applicative
 
@@ -33,4 +31,4 @@ sigma histVec thresh = sum $ map (uncurry interClassVariance) thresh
         s  u v = sumVec V.! v - sumVec V.! u
 
 multiOtsu :: V.Vector Double -> Int -> [Int]
-multiOtsu histVec n = fst $ maximumBy (comparing snd) $ map ((<$>) snd &&& sigma histVec) (range n [(0, 255)])
+multiOtsu histVec n = fst $ V.maximumBy (comparing snd) $ V.map ((<$>) snd &&& sigma histVec) (V.fromList $ range n [(0, 255)])

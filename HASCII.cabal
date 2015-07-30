@@ -57,7 +57,7 @@ executable hascii
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.6 && <5, friday, friday-devil, terminal-size, optparse-applicative, vector, bytestring, stream-fusion, HASCII
+  build-depends:       base >=4.6 && <5, friday, friday-devil, terminal-size, optparse-applicative, vector, bytestring, HASCII
 
   
   -- Directories containing source files.
@@ -69,7 +69,7 @@ executable hascii
 library
   exposed-modules:     Otsu
   hs-source-dirs:      lib
-  build-depends:       base >=4.6 && <5, vector, stream-fusion
+  build-depends:       base >=4.6 && <5, vector
   default-language:    Haskell2010
   ghc-options:         -O2
                        -Wall
