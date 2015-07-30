@@ -71,3 +71,14 @@ library
   hs-source-dirs:      lib
   build-depends:       base >=4.6 && <5, vector, stream-fusion
   default-language:    Haskell2010
+  ghc-options:         -O2
+                       -Wall
+
+benchmark FairBench
+  type:                exitcode-stdio-1.0
+  main-is:             bench.hs
+  hs-source-dirs:      bench
+  build-depends:       base >=4.6 && <5, criterion, vector, HASCII
+  ghc-options:         -O2
+                       -Wall
+  default-language:    Haskell2010
