@@ -1,6 +1,6 @@
 import Criterion.Main
 import Otsu
-import Data.Vector.Storable as V
+import Data.Vector as V
 
 vec :: V.Vector Double
 vec = V.map (/s) (V.enumFromN 1 256) where s = Prelude.sum [1..256]
