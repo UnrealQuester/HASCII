@@ -9,7 +9,7 @@ import Control.Applicative
 
 range :: Int -> [(Int, Int)] -> [[(Int, Int)]]
 range 0 xs = [xs]
-range n xs = concatMap (range (n-1) . splitRange xs) ((rangePair . head) xs)
+range n xs = (range (n-1) . splitRange xs) =<< ((rangePair . head) xs)
 
 pixelRange :: Int -> V.Vector [(Int, Int)]
 pixelRange n = V.fromList $ range n [(0, 255)]
@@ -23,7 +23,7 @@ splitRange (x:xs) n = (fst x, n) : (n + 1, snd x) : xs
 
 
 sigma :: V.Vector Double -> [(Int, Int)] -> Double
-sigma histVec thresh = sum $ map (uncurry interClassVariance) thresh
+sigma histVec thresh = sum $ (uncurry interClassVariance) <$> thresh
     where
         interClassVariance u v | puv == 0 = 0
                                | otherwise = s u v ^ (2::Integer) / puv where
@@ -35,7 +35,7 @@ sigma histVec thresh = sum $ map (uncurry interClassVariance) thresh
         s  u v = sumVec V.! v - sumVec V.! u
 
 bestCandidate :: Ord b => (a -> b) -> V.Vector a -> a
-bestCandidate f xs = fst $ V.maximumBy (comparing snd) $ V.map (id &&& f) xs
+bestCandidate f xs = fst . V.maximumBy (comparing snd) $ V.map (id &&& f) xs
 
 multiOtsu :: V.Vector Double -> Int -> [Int]
 multiOtsu histVec n = snd <$> bestCandidate (sigma histVec) (pixelRange n)
