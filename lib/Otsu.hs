@@ -31,8 +31,8 @@ sigma histVec thresh = sum $ (uncurry interClassVariance) <$> thresh
         multVec = V.imap (\i x -> fromIntegral (i+1) * x) histVec
         sumVec = V.postscanl (+) 0 multVec
         lP = V.postscanl (+) 0 histVec
-        p  u v = lP V.! v - lP V.! u
-        s  u v = sumVec V.! v - sumVec V.! u
+        p  u v = lP `V.unsafeIndex` v - lP `V.unsafeIndex` u
+        s  u v = sumVec `V.unsafeIndex` v - sumVec `V.unsafeIndex` u
 
 bestCandidate :: Ord b => (a -> b) -> V.Vector a -> a
 bestCandidate f xs = fst . V.maximumBy (comparing snd) $ V.map (id &&& f) xs
