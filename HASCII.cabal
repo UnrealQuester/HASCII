@@ -74,7 +74,7 @@ library
   ghc-options:         -O2
                        -Wall
 
-benchmark FairBench
+benchmark HasciiBench
   type:                exitcode-stdio-1.0
   main-is:             bench.hs
   hs-source-dirs:      bench
