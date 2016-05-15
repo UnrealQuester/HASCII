@@ -44,8 +44,10 @@ To view your image, simply type
 
 # Options
 
-    $ hascii [--characters=<chars>] [--width=<value>] [--height=<value>] [mode=<mode>] [FILENAME]
-    
+    $ hascii [FILENAME] [-h|--height HEIGHT] [-w|--width WIDTH]
+             [-m|--mode width|height|original|smallest]
+             [-c|--characters CHARACTERS]
+
     
 ## Filename
 
